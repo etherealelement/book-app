@@ -19,6 +19,7 @@
   "author": "Vitaly Safonov",
   "license": "ISC",
   "dependencies": {
+    "on-change": "^4.0.2",
     "rollup": "^3.20.2"
   },
   "devDependencies": {
