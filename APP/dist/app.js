@@ -1032,7 +1032,6 @@
     }
 
     render() {
-      this.el.innerHTML = "";
       this.el.classList.add("header");
       this.el.innerHTML = `
 		<div>
@@ -1053,6 +1052,32 @@
 		</div>
 		</a>
 		</div>
+		`;
+      return this.el;
+    }
+  }
+
+  class Search extends DivComponent {
+    constructor(state) {
+      super();
+      this.appState = state;
+    }
+
+    render() {
+      this.el.classList.add("search");
+      this.el.innerHTML = `
+			<div class="search-wrapper">
+					<input 
+					type="text" 
+					placeholder = "Найти книгу или автора...." 
+					class="search__input"
+					/>
+				<img src="/static/search.svg" alt="Search icon">
+			</div>	
+
+			<button  aria-label = "search">
+			<img src="/static/search-white.svg" alt="Search icon">
+			</button>
 		`;
       return this.el;
     }
@@ -1082,6 +1107,7 @@
 
     render() {
       const main = document.createElement("div");
+      main.append(new Search(this.state).render());
       this.app.innerHTML = "";
       this.app.append(main);
       this.renderHeader();
