@@ -4,6 +4,7 @@
   "description": "Cool book app",
   "main": "app.js",
   "scripts": {
+    "live-s": "live-server",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -14,5 +15,8 @@
     "books"
   ],
   "author": "Vitaly Safonov",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "rollup": "^3.20.2"
+  }
 }
