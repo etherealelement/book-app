@@ -1027,134 +1027,269 @@
 	}
 
 	class Header extends DivComponent {
-	  constructor(appState) {
-	    super();
-	    this.appState = appState;
-	  }
+		constructor(appState) {
+			super();
+			this.appState = appState;
+		}
 
-	  render() {
-	    this.el.classList.add("header");
-	    this.el.innerHTML = `
-		<div>
-			<img src="/static/logo.svg" alt="logo"/>
-		</div>
-		<div class="menu">
-		<a class="menu__item" href="#">
-		<img src="/static/search.svg" alt="Search"/>
-		Поиск книг
-		</a>
-		<a class="menu__item" href="#favorites">
-		<img src="/static/favorites.svg" alt="Favorite"/>
-		Избранное
-		<div class="menu__counter">
-				${this.appState.favorites.length}
-		</div>
-		</a>
-		</div>
+		render() {
+			this.el.classList.add('header');
+			this.el.innerHTML = `
+			<div>
+				<img src="/static/logo.svg" alt="Логотип" />
+			</div>
+			<div class="menu">
+				<a class="menu__item" href="#">
+					<img src="/static/search.svg" alt="Поиск иконка" />
+					Поиск книг
+				</a>
+				<a class="menu__item" href="#favorites">
+					<img src="/static/favorites.svg" alt="Избранное иконка" />
+					Избранное
+					<div class="menu__counter">
+						${this.appState.favorites.length}
+					</div>
+				</a>
+			</div>
 		`;
-	    return this.el;
-	  }
+			return this.el;
+		}
+	}
+
+	class Card extends DivComponent {
+		constructor(appState, cardState) {
+			super();
+			this.appState = appState;
+			this.cardState = cardState;
+		}
+
+		#addToFavorites() {
+			this.appState.favorites.push(this.cardState);
+		}
+
+		#deleteFromFavorites() {
+			this.appState.favorites = this.appState.favorites.filter(
+				b => b.key !== this.cardState.key
+			);
+		}
+
+		render() {
+			this.el.classList.add('card');
+			const existInFavorites = this.appState.favorites.find(
+				b => b.key == this.cardState.key
+			);
+			this.el.innerHTML = `
+			<div class="card__image">
+				<img src="https://covers.openlibrary.org/b/olid/${this.cardState.cover_edition_key}-M.jpg" alt="Обложка" />
+			</div>
+			<div class="card__info">
+				<div class="card__tag">
+					${this.cardState.subject ? this.cardState.subject[0] : 'Не задано'}
+				</div>
+				<div class="card__name">
+					${this.cardState.title}
+				</div>
+				<div class="card__author">
+					${this.cardState.author_name ? this.cardState.author_name[0] : 'Не задано'}
+				</div>
+				<div class="card__footer">
+					<button class="button__add ${existInFavorites ? 'button__active' : ''}">
+						${existInFavorites 
+							? '<img src="/static/favorites.svg" />'
+							: '<img src="/static/favorites-white.svg" />'
+						}
+					</button>
+				</div>
+			</div>
+		`;
+			if (existInFavorites) {
+				this.el
+					.querySelector('button')
+					.addEventListener('click', this.#deleteFromFavorites.bind(this));
+			} else {
+				this.el
+					.querySelector('button')
+					.addEventListener('click', this.#addToFavorites.bind(this));
+			}
+			return this.el;
+		}
+	}
+
+	class CardList extends DivComponent {
+		constructor(appState, parentState) {
+			super();
+			this.appState = appState;
+			this.parentState = parentState;
+		}
+
+		render() {
+			if (this.parentState.loading) {
+				this.el.innerHTML = `<div class="card_list__loader">Загрузка...</div>`;
+				return this.el;
+			}
+			const cardGrid = document.createElement('div');
+			cardGrid.classList.add('card_grid');
+			this.el.append(cardGrid);
+			for (const card of this.parentState.list) {
+				cardGrid.append(new Card(this.appState, card).render());
+			}
+			return this.el;
+		}
+	}
+
+	class FavoritesView extends AbstractView {
+		constructor(appState) {
+			super();
+			this.appState = appState;
+			this.appState = onChange(this.appState, this.appStateHook.bind(this));
+			this.setTitle('Мои книги');
+		}
+
+		destroy() {
+			onChange.unsubscribe(this.appState);
+		}
+
+		appStateHook(path) {
+			if (path === 'favorites') {
+				this.render();
+			}
+		}
+
+		render() {
+			const main = document.createElement('div');
+			main.innerHTML = `
+			<h1>Избранное</h1>
+		`;
+			main.append(new CardList(this.appState, { list: this.appState.favorites }).render());
+			this.app.innerHTML = '';
+			this.app.append(main);
+			this.renderHeader();
+		}
+
+		renderHeader() {
+			const header = new Header(this.appState).render();
+			this.app.prepend(header);
+		}
 	}
 
 	class Search extends DivComponent {
-	  constructor(state) {
-	    super();
-	    this.appState = state;
-	  }
+		constructor(state) {
+			super();
+			this.state = state;
+		}
 
-	  search() {
-	    const value = this.el.querySelector("input").value;
-	    this.state.searchQuery = value;
-	  }
+		search() {
+			const value = this.el.querySelector('input').value;
+			this.state.searchQuery = value;
+		}
 
-	  render() {
-	    this.el.classList.add("search");
-	    this.el.innerHTML = `
-			<div class="search-wrapper">
-					<input 
-					type="text" 
-					placeholder = "Найти книгу или автора...." 
+		render() {
+			this.el.classList.add('search');
+			this.el.innerHTML = `
+			<div class="search__wrapper">
+				<input
+					type="text"
+					placeholder="Найти книгу или автора...."
 					class="search__input"
-					/>
-				<img src="/static/search.svg" alt="Search icon">
-			</div>	
-			<button  aria-label = "search">
-			<img src="/static/search-white.svg" alt="Search icon">
-			</button>
+					value="${this.state.searchQuery ? this.state.searchQuery : ''}"
+				/>
+				<img src="/static/search.svg" alt="Иконка поиска" />
+			</div>
+			<button aria-label="Искать"><img src="/static/search-white.svg" alt="Иконка поиска" /></button>
 		`;
-	    this.el.querySelector("button").addEventListener("click", this.search.bind(this));
-	    this.el.querySelector("input").addEventListener("keydown", (e)=> {
-	      if (e.code === "Enter") {
-	        this.search();
-	      }
-	    });
-	    return this.el;
-	  }
+			this.el.querySelector('button').addEventListener('click', this.search.bind(this));
+			this.el.querySelector('input').addEventListener('keydown', (event) => {
+				if (event.code === 'Enter') {
+					this.search();
+				}
+			});
+			return this.el;
+		}
 	}
 
 	class MainView extends AbstractView {
-	  state = {
-	    list: [],
-	    loading: false,
-	    searchQuery: undefined,
-	    offset: 0,
-	  };
+		state = {
+			list: [],
+			numFound: 0,
+			loading: false,
+			searchQuery: undefined,
+			offset: 0
+		};
 
-	  constructor(appState) {
-	    super();
-	    this.appState = appState;
-	    this.appState = onChange(this.appState, this.appStateHook.bind(this));
-	    this.state = onChange(this.state, this.stateHook.bind(this));
-	    this.setTitle("Поиск книг");
-	  }
+		constructor(appState) {
+			super();
+			this.appState = appState;
+			this.appState = onChange(this.appState, this.appStateHook.bind(this));
+			this.state = onChange(this.state, this.stateHook.bind(this));
+			this.setTitle('Поиск книг');
+		}
 
-	  appStateHook(path) {
-	    console.log(path);
-	    if (path === "favorites") {
-	      console.log(path);
-	    }
-	  }
+		destroy() {
+			onChange.unsubscribe(this.appState);
+			onChange.unsubscribe(this.state);
+		}
 
-	  stateHook(path) {
-	    if (path === "searchQuery") {
-	      console.log(path);
-	    }
-	  }
+		appStateHook(path) {
+			if (path === 'favorites') {
+				this.render();
+			}
+		}
 
-	  render() {
-	    const main = document.createElement("div");
-	    main.append(new Search(this.state).render());
-	    this.app.innerHTML = "";
-	    this.app.append(main);
-	    this.renderHeader();
-	    this.appState.favorites.push("d");
-	  }
+		async stateHook(path) {
+			if (path === 'searchQuery') {
+				this.state.loading = true;
+				const data = await this.loadList(this.state.searchQuery, this.state.offset);
+				this.state.loading = false;
+				this.state.numFound = data.numFound;
+				this.state.list = data.docs;
+			}
+			if (path === 'list' || path === 'loading') {
+				this.render();
+			}
+		}
 
-	  renderHeader() {
-	    const header = new Header(this.appState).render();
-	    this.app.prepend(header);
-	  }
+		async loadList(q, offset) {
+			const res = await fetch(`https://openlibrary.org/search.json?q=${q}&offset=${offset}`);
+			return res.json();
+		}
+
+		render() {
+			const main = document.createElement('div');
+			main.innerHTML = `
+			<h1>Найдено книг – ${this.state.numFound}</h1>
+		`;
+			main.append(new Search(this.state).render());
+			main.append(new CardList(this.appState, this.state).render());
+			this.app.innerHTML = '';
+			this.app.append(main);
+			this.renderHeader();
+		}
+
+		renderHeader() {
+			const header = new Header(this.appState).render();
+			this.app.prepend(header);
+		}
 	}
 
 	class App {
 		routes = [
-			{path: "", view: MainView}
+			{path: "", view: MainView },
+			{path: "#favorites", view: FavoritesView },
 		];
-
 		appState = {
 			favorites: []
-		}
+		};
 
 		constructor() {
-			window.addEventListener("hashchange", this.route.bind(this));
+			window.addEventListener('hashchange', this.route.bind(this));
 			this.route();
 		}
 
 		route() {
-			if(this.currentView) {
-				this.currentView.destoy();
+			if (this.currentView) {
+				this.currentView.destroy();
 			}
-			const view = this.routes.find(r => r.path == location.hash)	.view;
+			const view = this.routes.find(r => r.path == location.hash).view;
 			this.currentView = new view(this.appState);
 			this.currentView.render();
 		}
